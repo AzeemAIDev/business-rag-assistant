@@ -1,0 +1,9 @@
+{
+  "qdrant_url": "",
+  "qdrant_key": "",
+  "collection_name": "",
+  "embedding_model_name": "sentence-transformers/all-MiniLM-L6-v2",
+  "num_chunks": 2,
+  "prompt_template":"If the user's question is in Urdu, translate the English context to Urdu and answer in two lines. If the user's question is in English, answer in two lines in English. Do not print any message about the question's language. Context: {context} Question: {question}"
+
+}
