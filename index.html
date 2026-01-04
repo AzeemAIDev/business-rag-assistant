@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Intelligent Company Assistant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .chat-container { height: calc(100vh - 220px); }
+        .glass-morphism {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+        .user-msg {
+            background: #2563eb;
+            color: white;
+            border-radius: 18px 18px 0px 18px;
+        }
+        .bot-msg {
+            background: #f1f5f9;
+            color: #1e293b;
+            border-radius: 18px 18px 18px 0px;
+        }
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-slate-50">
+
+    <div class="max-w-5xl mx-auto p-4 md:p-10">
+        <div class="flex items-center justify-between mb-8">
+            <div>
+                <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">
+                    Intelligent <span class="text-blue-600">Company</span> Assistant
+                </h1>
+                <p class="text-slate-500 font-medium">Your Expert Corporate Knowledge Partner</p>
+            </div>
+            <div class="flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-sm border border-slate-200">
+                <span class="relative flex h-3 w-3">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                </span>
+                <span class="text-sm font-semibold text-slate-700">System Ready</span>
+            </div>
+        </div>
+
+        <div class="glass-morphism rounded-3xl shadow-2xl overflow-hidden flex flex-col border border-slate-200">
+            <div id="chat-box" class="chat-container overflow-y-auto p-6 space-y-6 bg-white/50">
+                <div class="flex justify-start">
+                    <div class="bot-msg p-4 shadow-sm max-w-[80%] leading-relaxed">
+                        <p class="font-semibold mb-1 text-blue-600">System Message</p>
+                        Hello! I am your <strong>Intelligent Company Assistant</strong>. I can help you analyze corporate documents and answer your business queries instantly. How can I assist you today?
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-6 bg-white border-t border-slate-100">
+                <div class="flex gap-3">
+                    <input type="text" id="user-input" 
+                        class="flex-1 p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-slate-700 shadow-sm" 
+                        placeholder="Ask me anything about the company documents...">
+                    
+                    <button onclick="sendMessage()" id="send-btn" 
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-2xl transition-all flex items-center gap-2 font-bold shadow-lg shadow-blue-200">
+                        <span>Send</span>
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+                <p class="text-center text-xs text-slate-400 mt-4">Powered by RAG Technology & DeepSeek AI</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const chatBox = document.getElementById('chat-box');
+        const userInput = document.getElementById('user-input');
+
+        // Handle Enter Key
+        userInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") sendMessage();
+        });
+
+        async function sendMessage() {
+            const question = userInput.value.trim();
+            if (!question) return;
+
+            // 1. Show User Message
+            appendMessage('user', question);
+            userInput.value = '';
+            
+            // 2. Show Loading State
+            const loadingId = addLoadingIndicator();
+
+            try {
+                // 3. API Call to your FastAPI
+                const response = await fetch('http://127.0.0.1:8000/ask', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question: question })
+                });
+
+                const data = await response.json();
+                removeLoadingIndicator(loadingId);
+
+                if (response.ok) {
+                    // Extract answer from LangChain response object if necessary
+                    const botResponse = typeof data.answer === 'object' ? data.answer.content : data.answer;
+                    appendMessage('bot', botResponse);
+                } else {
+                    appendMessage('bot', "Error: " + (data.detail || "Could not process request."));
+                }
+            } catch (error) {
+                removeLoadingIndicator(loadingId);
+                appendMessage('bot', "Connection failed! Please ensure your FastAPI backend is running at http://127.0.0.1:8000");
+                console.error(error);
+            }
+        }
+
+        function appendMessage(role, text) {
+            const div = document.createElement('div');
+            div.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'}`;
+            
+            const innerDiv = document.createElement('div');
+            innerDiv.className = `${role === 'user' ? 'user-msg' : 'bot-msg'} p-4 shadow-sm max-w-[85%] whitespace-pre-wrap leading-relaxed`;
+            
+            innerDiv.textContent = text;
+            div.appendChild(innerDiv);
+            chatBox.appendChild(div);
+            
+            // Smooth Scroll to bottom
+            chatBox.scrollTo({ top: chatBox.scrollHeight, behavior: 'smooth' });
+        }
+
+        function addLoadingIndicator() {
+            const id = 'loading-' + Date.now();
+            const div = document.createElement('div');
+            div.id = id;
+            div.className = 'flex justify-start';
+            div.innerHTML = `<div class="bot-msg p-4 animate-pulse text-slate-400 italic">Assistant is thinking...</div>`;
+            chatBox.appendChild(div);
+            chatBox.scrollTop = chatBox.scrollHeight;
+            return id;
+        }
+
+        function removeLoadingIndicator(id) {
+            const element = document.getElementById(id);
+            if (element) element.remove();
+        }
+    </script>
+</body>
+</html>
